@@ -1,0 +1,13 @@
+{
+  "name": "benco",
+  "version": "1.0.0",
+  "description": "Wrapper for Crédit Agricole bank statement extracts",
+  "main": "main.js",
+  "repository": "https://github.com/Veejay/benco.git",
+  "author": "Bertrand Chardon <bertrand.chardon@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "chalk": "^2.1.0"
+  }
+}
