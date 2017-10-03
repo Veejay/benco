@@ -18,12 +18,14 @@ class BankExtractParser {
         if (error) {
           reject(error)
         } else {
-          const transactions = await Promise.all(contents.split(/\r\n\+-+\+\r\n/).map(async record => {
+          const cleanData = contents.split(/\r\n\+-+\+\r\n/).slice(1)
+          console.log(cleanData)
+          const transactions = await Promise.all(cleanData.map(async record => {
             const parser = new BankTransactionParser(record)
             const transaction = await parser.parse()
             return transaction
           }))
-          console.log(transactions)
+          resolve(transactions)
         }
       })
     })
@@ -37,12 +39,13 @@ class BankTransactionParser {
 
   async parse() {
     return new Promise(async (resolve, reject) => {
-      const rows = await Promise.all(this.transaction.split("\r\n").map(async row => {
+      const rows = await Promise.all(this.transaction.split(/(\r\n)+/).map(async row => {
         const parser = new BankTransactionRowParser(row)
         const data = await parser.parse()
         return data
       }))
-      resolve(rows)
+      const transaction = rows.reduce((memo, row) => { return Object.assign(memo, row) }, {})
+      resolve(transaction)
     })
   }
 
@@ -106,11 +109,11 @@ class TransactionCollection {
   }
 }
 
-class FinancialTransaction {
+class AbstractTransaction {
   constructor(transaction, formatter) {
     this.date = Date.parse(transaction.date)
     this.amount = transaction.amount
-    this.reference = formatter.format(transaction.reference)
+    this.reference = transaction.reference
   }
 
   get formattedDate() {
@@ -135,7 +138,7 @@ class ReferenceFormatter {
   }
 }
 
-class DebitTransaction extends FinancialTransaction {
+class DebitTransaction extends AbstractTransaction {
   constructor(transaction) {
     super(transaction)
     this.amount = -transaction.amount
@@ -146,7 +149,7 @@ class DebitTransaction extends FinancialTransaction {
   }
 }
 
-class CreditTransaction extends FinancialTransaction {
+class CreditTransaction extends AbstractTransaction {
   constructor(transaction) {
     super(transaction)
   }
@@ -156,12 +159,21 @@ class CreditTransaction extends FinancialTransaction {
   }
 }
 
+class FinancialTransaction {
+  static create(record) {
+   let transaction = Object.is(record.type, 'debit') ? new DebitTransaction(record) : new CreditTransaction(record)
+    return transaction
+  }
+}
 
 const parser = new BankExtractParser()
-const main = async () => {
+const main = async function() {
   try {
     const rows = await parser.parse(STATEMENT_PATH)
-    console.log(rows.join(chalk.blue("\n============\n")))
+    const transactions = rows.map(row => {
+      return FinancialTransaction.create(row)
+    })
+    console.log(transactions.map(toString))
   } catch(error) {
     console.error(error)
   }
