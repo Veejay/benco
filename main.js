@@ -1,89 +1,8 @@
-// const FinancialTransaction = require('financial_transation')
-//const BankExtractParser = require('bank_statement_parser')
-const fs = require('fs')
 const STATEMENT_PATH = './statement.txt'
 const chalk = require('chalk')
 
-// const transactions = new TransactionCollection(parser.transactions.map(transaction => {
-//   return FinancialTransaction.create(transaction)
-// }))
+const {BankExtractParser} = require('./modules/bank_extract_parser')
 
-class BankExtractParser {
-  constructor() {
-  }
-
-  async parse(path) {
-    return new Promise((resolve, reject) => {
-      fs.readFile(path, {encoding: 'latin1', flag: 'r'}, async (error, contents) => {
-        if (error) {
-          reject(error)
-        } else {
-          const cleanData = contents.split(/\r\n\+-+\+\r\n/).slice(1)
-          console.log(cleanData)
-          const transactions = await Promise.all(cleanData.map(async record => {
-            const parser = new BankTransactionParser(record)
-            const transaction = await parser.parse()
-            return transaction
-          }))
-          resolve(transactions)
-        }
-      })
-    })
-  }
-}
-
-class BankTransactionParser {
-  constructor(transaction) {
-    this.transaction = transaction
-  }
-
-  async parse() {
-    return new Promise(async (resolve, reject) => {
-      const rows = await Promise.all(this.transaction.split(/(\r\n)+/).map(async row => {
-        const parser = new BankTransactionRowParser(row)
-        const data = await parser.parse()
-        return data
-      }))
-      const transaction = rows.reduce((memo, row) => { return Object.assign(memo, row) }, {})
-      resolve(transaction)
-    })
-  }
-
-}
-
-class BankTransactionRowParser {
-  constructor(row) {
-    this.row = row
-  }
-
-  async parse() {
-    return new Promise((resolve, reject) => {
-      if(/^Date/.test(this.row)) {
-        // Showing weakness here buddy, come on...
-        const date = this.row.split(/:\s+/)[1].trim()
-        resolve({date})
-      } else {
-        if (/^Libellé/.test(this.row)) {
-          const reference = this.row.split(/:\s+/)[1].trim()
-          resolve({reference})
-        } else {
-          if (/^Débit/.test(this.row)) {
-            const amount = this.row.split(/:\s+/)[1].trim()
-            
-            resolve({type: "debit", amount: parseFloat(amount.replace(/,/, '.')).toFixed(2)})
-          } else {
-            if (/^Crédit/.test(this.row)) {
-              const amount = this.row.split(/:\s+/)[1].trim()
-              resolve({type: "credit", amount: parseFloat(amount.replace(/,/, '.')).toFixed(2)})
-            } else {
-              resolve({})
-            }
-          }
-        }
-      }
-    })
-  }
-}
 
 class TransactionCollection {
   constructor(transactions) {
@@ -109,21 +28,30 @@ class TransactionCollection {
   }
 }
 
+const normalize = date => {
+  const regex = /^([0-9]{2})\/([0-9]{2})/
+  const captureGroups = {day: 1, month: 2}
+  const result = regex.exec(date)
+  return `2017-${result[captureGroups.month]}-${result[captureGroups.day]}`
+}
+
 class AbstractTransaction {
   constructor(transaction, formatter) {
-    this.date = Date.parse(transaction.date)
+    const normalizedDate = normalize(transaction.date)
+    this.date = new Date(normalizedDate)
     this.amount = transaction.amount
     this.reference = transaction.reference
   }
-
+  
   get formattedDate() {
-    const year = this.date.getFullYear()
-    const month = this.date.getMonth()
-    const day = this.date.getDay()
-    const hours = this.date.getHours()
-    const minutes = this.date.getMinutes()
-    const seconds = this.date.getSeconds()
-    return `${year}-${month}-${day} ${hour}-${minutes}-${seconds}`
+    return this.date.toISOString().split('T')[0]
+    // const year = this.date.getFullYear()
+    // const month = this.date.getMonth()
+    // const day = this.date.getDay()
+    // const hours = this.date.getHours()
+    // const minutes = this.date.getMinutes()
+    // const seconds = this.date.getSeconds()
+    // return `${year}-${month}-${day} ${hours}-${minutes}-${seconds}`
   }
 }
 
@@ -140,12 +68,17 @@ class ReferenceFormatter {
 
 class DebitTransaction extends AbstractTransaction {
   constructor(transaction) {
+    
     super(transaction)
-    this.amount = -transaction.amount
+    this.amount = transaction.amount
+  }
+
+  get computedAmount() {
+    return -(this.amount)
   }
 
   toString() {
-    return `${this.formattedDate}: Spent ${amount}\U+20A0 at ${reference}`
+    return `${this.formattedDate}: Spent ${chalk.white.bgRed.bold(this.amount + '€')} at ${chalk.white.bgBlue(this.reference)}`
   }
 }
 
@@ -154,27 +87,38 @@ class CreditTransaction extends AbstractTransaction {
     super(transaction)
   }
 
+  get computedAmount() {
+    return this.amount
+  }
+
   toString() {
-    return `${this.formattedDate}: Received ${amount}\U+20A0 from ${reference}`
+    return `${this.formattedDate}: Received ${chalk.white.bgGreen(this.amount + '€')} from ${chalk.white.bgBlue(this.reference)}`
   }
 }
 
 class FinancialTransaction {
   static create(record) {
-   let transaction = Object.is(record.type, 'debit') ? new DebitTransaction(record) : new CreditTransaction(record)
+    let transaction = Object.is(record.type, 'debit') ? new DebitTransaction(record) : new CreditTransaction(record)
     return transaction
   }
 }
 
 const parser = new BankExtractParser()
-const main = async function() {
+const main = async function () {
   try {
     const rows = await parser.parse(STATEMENT_PATH)
     const transactions = rows.map(row => {
-      return FinancialTransaction.create(row)
+      const transaction = FinancialTransaction.create(row)
+      return transaction
     })
-    console.log(transactions.map(toString))
-  } catch(error) {
+    const collection = new TransactionCollection(transactions)
+    const bigTransactions = collection.debits.filter(transaction => {
+      return transaction.amount >= 600.0
+    })
+    console.log(bigTransactions.map(transaction => {
+      return transaction.toString()
+    }).join("\n"))
+  } catch (error) {
     console.error(error)
   }
 }
