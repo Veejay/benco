@@ -1,8 +1,11 @@
-const STATEMENT_PATH = './statement.txt'
+// Node modules
 const chalk = require('chalk')
 
+// Custom modules
 const {BankExtractParser} = require('./modules/bank_extract_parser')
 
+// Constants
+const STATEMENT_PATH = './statement.txt'
 
 class TransactionCollection {
   constructor(transactions) {
@@ -45,19 +48,11 @@ class AbstractTransaction {
   
   get formattedDate() {
     return this.date.toISOString().split('T')[0]
-    // const year = this.date.getFullYear()
-    // const month = this.date.getMonth()
-    // const day = this.date.getDay()
-    // const hours = this.date.getHours()
-    // const minutes = this.date.getMinutes()
-    // const seconds = this.date.getSeconds()
-    // return `${year}-${month}-${day} ${hours}-${minutes}-${seconds}`
   }
 }
 
 class ReferenceFormatter {
   constructor() {
-    //
     this.mapping = JSON.parse(fs.readFileSync('mapping.json'))
   }
 
