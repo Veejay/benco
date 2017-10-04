@@ -26,6 +26,8 @@ class TransactionCollection {
 
   static where(criteria) {
     this.transactions.filter(transaction => {
+      // NOTE: matches is not implemented on transactions
+      // This is a stub reflecting what the API should ideally look like
       return transaction.matches(criteria)
     })
   }
@@ -33,26 +35,32 @@ class TransactionCollection {
 
 const normalize = date => {
   const regex = /^([0-9]{2})\/([0-9]{2})/
+  // Pseudo capture groups, JS doesn't have support for them (October 2017)
   const captureGroups = {day: 1, month: 2}
   const result = regex.exec(date)
+  // We have to hardcode 2017 in there for now, since Crédit Agricole doesn't provide the year (yeah...)
   return `2017-${result[captureGroups.month]}-${result[captureGroups.day]}`
 }
 
 class AbstractTransaction {
   constructor(transaction, formatter) {
     const normalizedDate = normalize(transaction.date)
+    // The date is provided as the classic French format, Date expects YYYY-mm-dd
     this.date = new Date(normalizedDate)
-    this.amount = transaction.amount
-    this.reference = transaction.reference
+    const {amount, reference} = transaction
+    Object.assign(this, {amount, reference})
   }
   
   get formattedDate() {
-    return this.date.toISOString().split('T')[0]
+    // The time part is discarded, it's irrelevant
+    let [date] = this.date.toISOString().split('T')
+    return date
   }
 }
 
 class ReferenceFormatter {
   constructor() {
+    // FIXME: This should be done asynchronously
     this.mapping = JSON.parse(fs.readFileSync('mapping.json'))
   }
 
