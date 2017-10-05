@@ -1,9 +1,13 @@
-const { DebitTransaction } = require('./debit_transaction')
-const { CreditTransaction } = require('./credit_transaction')
+const { DebitTransaction } = require('./debit')
+const { CreditTransaction } = require('./credit')
+const { FinancialTransaction } = require('./transaction')
 
 class TransactionCollection {
   constructor(transactions) {
-    this.transactions = transactions
+    this.transactions = transactions.map(row => {
+      const transaction = FinancialTransaction.create(row)
+      return transaction
+    })
   }
 
   get debits() {

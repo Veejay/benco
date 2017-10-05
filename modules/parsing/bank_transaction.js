@@ -1,4 +1,4 @@
-const {BankTransactionRowParser} = require('./bank_transaction_row_parser')
+const { BankTransactionRowParser } = require('./bank_transaction_row')
 
 const LINE_SEPARATOR = new RegExp('(\r\n)+')
 

@@ -1,6 +1,6 @@
 const chalk = require('chalk')
 
-const {AbstractTransaction} = require('./abstract_transaction')
+const { AbstractTransaction } = require('./abstract')
 
 class CreditTransaction extends AbstractTransaction {
   constructor(transaction) {

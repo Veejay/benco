@@ -1,5 +1,5 @@
-const { DebitTransaction } = require('./debit_transaction')
-const { CreditTransaction } = require('./credit_transaction')
+const { DebitTransaction } = require('./debit')
+const { CreditTransaction } = require('./credit')
 
 class FinancialTransaction {
   static create(record) {

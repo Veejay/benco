@@ -2,9 +2,10 @@
 const fs = require('fs')
 
 // Custom modules
-const {FinancialTransaction} = require('./../transactions/financial_transaction')
-const {BankTransactionParser} = require('./bank_transaction_parser')
-const {TransactionCollection} = require('./../transactions/transaction_collection')
+const { BankTransactionParser } = require('./bank_transaction')
+const { FinancialTransaction } = require('./../transactions/transaction')
+const { TransactionCollection } = require('./../transactions/transaction_collection')
+
 const readStatement = (path) => {
   return new Promise((resolve, reject) => {
     fs.readFile(path, { encoding: 'latin1', flag: 'r' }, (error, contents) => {
@@ -32,10 +33,7 @@ class BankExtractParser {
             const transaction = await parser.parse()
             return transaction
           }))
-          const transactions = new TransactionCollection(rows.map(row => {
-            const transaction = FinancialTransaction.create(row)
-            return transaction
-          }))
+          const transactions = new TransactionCollection(rows)
           resolve(transactions)
         }).catch(reject)
       })

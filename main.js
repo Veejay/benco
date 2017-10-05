@@ -2,7 +2,7 @@
 const chalk = require('chalk')
 
 // Custom modules
-const {BankExtractParser} = require('./modules/parsing/bank_extract_parser')
+const {BankExtractParser} = require('./modules/parsing/bank_extract')
 
 // Constants
 const STATEMENT_PATH = './statement.txt'
