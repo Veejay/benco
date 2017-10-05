@@ -1,5 +1,10 @@
+// Node modules
 const fs = require('fs')
-const {BankTransactionRowParser} = require('./bank_transaction_row_parser')
+
+// Custom modules
+const {FinancialTransaction} = require('./../transactions/financial_transaction')
+const {BankTransactionParser} = require('./bank_transaction_parser')
+const {TransactionCollection} = require('./../transactions/transaction_collection')
 const readStatement = (path) => {
   return new Promise((resolve, reject) => {
     fs.readFile(path, { encoding: 'latin1', flag: 'r' }, (error, contents) => {
@@ -19,11 +24,16 @@ class BankExtractParser {
     async parse(path) {
       return new Promise((resolve, reject) => {
         readStatement(path).then(async contents => {
-          const data = contents.split(/\r\n\+-+\+\r\n/)
+          const TRANSACTION_SEPARATOR = /\r\n\+-+\+\r\n/
+          const data = contents.split(TRANSACTION_SEPARATOR)
           const cleanData = data.slice(1, data.length - 2)
-          const transactions = await Promise.all(cleanData.map(async record => {
+          const rows = await Promise.all(cleanData.map(async record => {
             const parser = new BankTransactionParser(record)
             const transaction = await parser.parse()
+            return transaction
+          }))
+          const transactions = new TransactionCollection(rows.map(row => {
+            const transaction = FinancialTransaction.create(row)
             return transaction
           }))
           resolve(transactions)
@@ -32,24 +42,6 @@ class BankExtractParser {
     }
   }
   
-  class BankTransactionParser {
-    constructor(transaction) {
-      this.transaction = transaction
-    }
   
-    async parse() {
-      return new Promise(async (resolve, reject) => {
-        const lines = this.transaction.split(/(\r\n)+/)
-        const rows = await Promise.all(lines.map(async row => {
-          const parser = new BankTransactionRowParser(row.trim())
-          const data = await parser.parse()
-          return data
-        }))
-        const transaction = rows.reduce((memo, row) => { return Object.assign(memo, row) }, {})
-        resolve(transaction)
-      })
-    }
-  
-  }
 
   module.exports = {BankExtractParser}
