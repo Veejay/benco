@@ -1,6 +1,3 @@
-// Node modules
-const chalk = require('chalk')
-
 // Custom modules
 const {BankExtractParser} = require('./modules/parsing/bank_extract')
 
